@@ -1,0 +1,136 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Mouse = Players.LocalPlayer:GetMouse()
+local Folder = Instance.new("Folder", game:GetService("Workspace"))
+local Part = Instance.new("Part", Folder)
+local Attachment1 = Instance.new("Attachment", Part)
+local Updated = Mouse.Hit + Vector3.new(0, 5, 0)
+
+Part.Anchored = true
+Part.CanCollide = false
+Part.Transparency = 1
+
+local function ForcePart(v)
+    if v:IsA("Part") and not v.Anchored and not v.Parent:FindFirstChild("Humanoid") and not v.Parent:FindFirstChild("Head") and v.Name ~= "Handle" then
+        Mouse.TargetFilter = v
+        for _, x in ipairs(v:GetChildren()) do
+            if x:IsA("BodyAngularVelocity") or x:IsA("BodyForce") or x:IsA("BodyGyro") or x:IsA("BodyPosition") or x:IsA("BodyThrust") or x:IsA("BodyVelocity") or x:IsA("RocketPropulsion") then
+                x:Destroy()
+            end
+        end
+        if v:FindFirstChild("Attachment") then
+            v:FindFirstChild("Attachment"):Destroy()
+        end
+        if v:FindFirstChild("AlignPosition") then
+            v:FindFirstChild("AlignPosition"):Destroy()
+        end
+        if v:FindFirstChild("Torque") then
+            v:FindFirstChild("Torque"):Destroy()
+        end
+        v.CanCollide = false
+        local Torque = Instance.new("Torque", v)
+        Torque.Torque = Vector3.new(100000, 100000, 100000)
+        local AlignPosition = Instance.new("AlignPosition", v)
+        local Attachment2 = Instance.new("Attachment", v)
+        Torque.Attachment0 = Attachment2
+        AlignPosition.MaxForce = 9999999999999999
+        AlignPosition.MaxVelocity = math.huge
+        AlignPosition.Responsiveness = 200
+        AlignPosition.Attachment0 = Attachment2 
+        AlignPosition.Attachment1 = Attachment1
+    end
+end
+
+-- Menjalankan fungsi ForcePart pada seluruh part di workspace
+for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
+    ForcePart(v)
+end
+
+-- Memanggil fungsi ForcePart ketika part baru ditambahkan ke workspace
+game:GetService("Workspace").DescendantAdded:Connect(ForcePart)
+
+-- Memperbarui posisi tornado ketika tombol E ditekan
+UserInputService.InputBegan:Connect(function(input, isProcessed)
+    if input.KeyCode == Enum.KeyCode.E and not isProcessed then
+       Updated = Mouse.Hit + Vector3.new(0, 5, 0)
+    end
+end)
+
+-- Memperbarui posisi attachment secara terus-menerus
+spawn(function()
+    while game:GetService("RunService").RenderStepped:Wait() do
+        Attachment1.WorldCFrame = CFrame.new(Updated.Position)
+    end
+end)
+
+-- Membuat GUI untuk memilih pemain
+local function createPlayerListGui()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") -- Menggunakan PlayerGui milik pemain
+
+    local Frame = Instance.new("ScrollingFrame")
+    Frame.Size = UDim2.new(0, 200, 0, 300)
+    Frame.Position = UDim2.new(0, 20, 0.5, -150)
+    Frame.BackgroundTransparency = 0.5
+    Frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+    Frame.BorderSizePixel = 0
+    Frame.ScrollBarThickness = 10
+    Frame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    Frame.ScrollingDirection = Enum.ScrollingDirection.Y
+    Frame.Parent = ScreenGui
+
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Parent = Frame
+    UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    UIListLayout.Padding = UDim.new(0, 5)
+
+    local function updatePlayerList()
+        -- Clear existing buttons
+        for _, button in ipairs(Frame:GetChildren()) do
+            if button:IsA("TextButton") then
+                button:Destroy()
+            end
+        end
+
+        -- Create button for each player
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= Players.LocalPlayer then
+                local newButton = Instance.new("TextButton")
+                newButton.Text = player.Name
+                newButton.Parent = Frame
+                newButton.Size = UDim2.new(0.9, 0, 0, 30)
+                newButton.TextSize = 20
+                newButton.TextColor3 = Color3.new(1, 1, 1)
+                newButton.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+                newButton.BorderSizePixel = 0
+                newButton.MouseButton1Click:Connect(function()
+                    Updated = player.Character.HumanoidRootPart.CFrame + Vector3.new(0, 5, 0)
+                end)
+            end
+        end
+
+        -- Update CanvasSize to fit all buttons
+        Frame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+    end
+
+    -- Connect events for player joining and leaving
+    Players.PlayerAdded:Connect(updatePlayerList)
+    Players.PlayerRemoving:Connect(updatePlayerList)
+
+    -- Initial update of player list
+    updatePlayerList()
+
+    -- Add creator name with red color
+    local CreatorLabel = Instance.new("TextLabel")
+    CreatorLabel.Text = "DIBUAT OLEH CODEX_0xH4x0r"
+    CreatorLabel.Size = UDim2.new(0, 200, 0, 30)
+    CreatorLabel.Position = UDim2.new(0, 20, 0, 10)
+    CreatorLabel.TextSize = 14
+    CreatorLabel.TextColor3 = Color3.new(1, 0, 0) -- Merah
+    CreatorLabel.BackgroundTransparency = 1
+    CreatorLabel.Parent = ScreenGui
+end
+
+-- Call function to create player list GUI
+createPlayerListGui()
